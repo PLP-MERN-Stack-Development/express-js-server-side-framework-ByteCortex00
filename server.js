@@ -1,14 +1,76 @@
 // server.js - Starter Express server for Week 2 assignment
 
 // Import required modules
-const express = require('express');
-const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import connectDB from './config/db.js';
+import productRoutes from './routes/productRoutes.js';
+import { logger } from './middleware/logger.js';
+import { authenticate } from './middleware/auth.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
+// Ensure dotenv loads .env file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Verify MONGO_URI exists before connecting
+if (!process.env.MONGO_URI) {
+  console.error('❌ Missing MONGO_URI in .env file');
+  process.exit(1);
+}
+
+// Connect to MongoDB
+connectDB();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
 
+//======================================================
+// Middleware setup
+//======================================================
+
+// Built-in JSON parser
+app.use(express.json());
+
+// Swagger UI route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Custom logger
+app.use(logger);
+
+// Authentication middleware
+app.use(authenticate);
+
+//======================================================
+// Routes
+//======================================================
+
+// Product routes
+app.use('/api/products', productRoutes);
+
+
+// Root route
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
+//======================================================
+// Global Error Handler
+//======================================================
+app.use(errorHandler);
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+
+
+/*
 // Middleware setup
 app.use(bodyParser.json());
 
@@ -69,3 +131,4 @@ app.listen(PORT, () => {
 
 // Export the app for testing purposes
 module.exports = app; 
+*/
